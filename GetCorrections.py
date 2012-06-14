@@ -1,7 +1,11 @@
 #!/usr/bin/python 
 ##################
 ##GetCorrections.py simlk, june 2012
+##
 ##kald: GetCorrections.py <input_files> <output_dir>
+##
+##Opdater identiteter og konstanter nedenfor.
+##
 ################
 import os, sys
 import glob
@@ -9,11 +13,7 @@ from math import *
 import time
 
 DEBUG=False
-#ROD = [l_0 , m_0 , alpha_T, v_G, T_0]   - see calibration report
-
-ROD_53274=[-0.038*1e-3 , 7.36 , 0.72 , 0.001*1e-3 , 20.1]
-ROD_53273=[-0.038*1e-3 , 7.36 , 0.72 , 0.001*1e-3 , 20.1] 
-
+ND_VALUE=-999
 
 class Rod(object):
 	def __init__(self,name,data=None,zeroshift=None):
@@ -33,11 +33,11 @@ class Rod(object):
 			self.zeroshift=None
 	def Correct(self,temp,h):
 		if self.zeroshift is None:
-			raise Exception("Warning: rod %s, zeroshift not set!!")
+			raise Exception("Warning: rod %s, zeroshift not set!!" %self.name)
 		else:
 			zs=self.zeroshift
 		h_real=h-zs
-		h_corr=self.l0+h_real*(1+(self.m0+self.alpha_t*(temp-self.t0))*1e-6)+self.vg
+		h_corr=self.l0+h_real*(1+(self.m0+self.alpha_t*(temp-self.t0))*1e-6)+self.vg #see DE calibration report
 		h_corr+=zs
 		if DEBUG:
 			print("Rod: %s, before: %.7f m, after: %.7f m, zeroshift: %.4f m" %(self.name,h,h_corr,zs))
@@ -45,35 +45,63 @@ class Rod(object):
 			if "stop" in s:
 				sys.exit()
 		return h_corr
+	#Standard correction used when rod parameters NOT defined below!#
+	#ONLY a standard temperature expansion applied!# 
 	def StandardCorrection(self,temp,h):
 		if self.zeroshift is None:
-			raise Exception("Warning: rod %s, zeroshift not set!!")
+			raise Exception("Warning: rod %s, zeroshift not set!!" %self.name)
 		else:
 			zs=self.zeroshift
-		h_real=h_zs
+		h_real=h-zs
 		h_corr=h_real*(1+(0.8*1e-6)*(temp-20.0))
 		h_corr+=zs
 		return h_corr
 		
 	def SetZeroshift(self,zs):
 		self.zeroshift=zs
+
+#ROD = [l_0 [m] , m_0 [ppm], alpha_T [ppm], v_G [m], T_0 [degC] ]   - see calibration report
+ROD_53278=[0.0                ,4.81,      0.86 ,  0.0083*1e-3, 20.0]
+ROD_53274=[0.0                , 3.2  ,    0.83 , 0.00383*1e-3 ,20.0]
+ROD_53281=[0.0                , 6.89,     0.90, 0.02031*1e-3, 20.0]
+ROD_53369=[0.0                , 5.53,     0.79, 0.0147*1e-3,   20.0]
+ROD_53273=[0.061*1e-3     , 4.76 ,   1.08 , 0.001*1e-3 ,   20.1]
+ROD_15022=[0.006*1e-3     , -2.96,   0.76, 0.0*1e-3,  20.1]
+ROD_58620=[-0.011*1e-3    ,  1.17,   0.58, 0.002*1e-3, 20.0]
+ROD_53607=[-0.038*1e-3    ,  7.36,   0.72, 0.001*1e-3, 20.1]
+ROD_53119=[0.035*1e-3      , 4.44,   0.79,   -0.004*1e-3,19.9]
+ROD_13292=[-0.007*1e-3    , 1.12,    0.77,   0.002*1e-3, 20.1]
+ROD_34194=[0.046*1e-3      , 5.3,     0.80,     -0.004*1e-3, 20.1]
+ROD_12863=[0.328*1e-3      , 11.82,  0.90,  -0.001*1e-3, 20.1]
+
+
+
 		
 #TRANSLATION TABLE#
 RODS={
-"110":  Rod("110",ROD_53274),
-"111":  Rod("111",ROD_53273),
-"112":  Rod("112",ROD_53273),
-"961":  Rod("961",ROD_53273),
-"962":  Rod("962",ROD_53273),
-"963":  Rod("963",ROD_53273),
-"964":  Rod("963",ROD_53273),
-"965":  Rod("965",ROD_53273),
-"966":  Rod("966",ROD_53273),
-"967":  Rod("967",ROD_53273),
-"968":  Rod("968",ROD_53273)
+"110":  Rod("110",ROD_53278),
+"111":  Rod("111",ROD_53274),
+"112":  Rod("112",ROD_53281),
+"113":  Rod("113",ROD_53369),
+"120":  Rod("120",ROD_53273),
+"121":  Rod("121",ROD_15022),
+"132":  Rod("132",ROD_58620),
+"123":  Rod("123",ROD_53607),
+"130":  Rod("130",ROD_53119),
+"131":  Rod("131",ROD_13292),
+"122":  Rod("122",ROD_12863)
 }
+#"961":  Rod("961",ROD_53273),
+#"962":  Rod("962",ROD_53273),
+#"963":  Rod("963",ROD_53273),
+#"964":  Rod("963",ROD_53273),
+#"965":  Rod("965",ROD_53273),
+#"966":  Rod("966",ROD_53273),
+#"967":  Rod("967",ROD_53273),
+#"968":  Rod("968",ROD_53273)
 
-ND_VALUE=-999
+
+
 
 ###############################
 ## Function that reads data from data-file
@@ -303,6 +331,8 @@ def GetDiff(l1,l2):
 def GetStats(data):
 	sd=None
 	n=len(data)
+	if n==0:
+		return None,None
 	m=sum(data)/float(n)
 	if n>1:
 		sq_dev=sum([(x-m)**2/(n-1) for x in data])
@@ -320,6 +350,9 @@ def main(args):
 	if len(args)<3:
 		Usage()
 	files=glob.glob(args[1])
+	if len(files)==0:
+		print("No input files!")
+		Usage()
 	outdir=args[2]
 	ndiffs=[]
 	diffs=[]
@@ -368,16 +401,17 @@ def main(args):
 				if not ok:
 					print msg
 				h_uncorr,h_corr=s.GetHdiff(),s.GetHdiff(bc,fc)
-				diff=abs(h_corr-h_uncorr)*1000
+				diff=abs(h_corr-h_uncorr)*1e3  #convert to mm - used in all calculations on diffs below.
+				ndiff=diff/sqrt(s.distance*1e-3)
 				p1,p2=s.GetPoints()
-				if diff>sqrt(s.distance/1000.0)*0.2:
+				if ndiff>0.2: #0,2 ne limit for report
 					mean_temp=sum(s.temp)/float(len(s.temp))
 					print("Large correction!")
 					print("file: %s, stretch: %s->%s, diff: %.4f mm, dist: %.2f m" %(fname,p1,p2,diff,s.distance))
 					print("raw: %.6f m, corr: %.6fm" %(h_uncorr,h_corr))
-					print("normalised: %.6f ne" %(diff/sqrt(s.distance/1000.0)))
+					print("normalised: %.6f ne" %(ndiff))
 					print("Mean-temp: %.2f deg C" %mean_temp)
-				ndiffs.append(diff/sqrt(s.distance/1000.0))
+				ndiffs.append(ndiff)
 				diffs.append(diff)
 				if True: #perhaps add some switch here for no file output....
 					out.write("; %s to %s\n" %(p1,p2))
@@ -394,7 +428,9 @@ def main(args):
 		else:
 			print("%s not (new) MGL file" %fname)
 		f.close()
-		
+	if len(diffs)==0:
+		print("No hdiffs found!")
+		Usage()
 	m_diff,sd_diff=GetStats(diffs)
 	m_norm,sd_norm=GetStats(ndiffs)
 	max_diff=max(map(abs,diffs))
