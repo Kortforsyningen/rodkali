@@ -1,8 +1,8 @@
 #!/usr/bin/python 
 ##################
-##GetCorrections.py simlk, june 2012
+##rod_calibration.py simlk, june 2012
 ##
-##kald: GetCorrections.py <input_files> <output_dir>
+##kald: rod_calibration.py <input_files> <output_dir>
 ##
 ##Opdater identiteter og konstanter nedenfor.
 ##
@@ -61,18 +61,18 @@ class Rod(object):
 		self.zeroshift=zs
 
 #ROD = [l_0 [m] , m_0 [ppm], alpha_T [ppm], v_G [m], T_0 [degC] ]   - see calibration report
-ROD_53278=[0.0                ,4.81,      0.86 ,  0.0083*1e-3, 20.0]
-ROD_53274=[0.0                , 3.2  ,    0.83 , 0.00383*1e-3 ,20.0]
-ROD_53281=[0.0                , 6.89,     0.90, 0.02031*1e-3, 20.0]
-ROD_53369=[0.0                , 5.53,     0.79, 0.0147*1e-3,   20.0]
-ROD_53273=[0.061*1e-3     , 4.76 ,   1.08 , 0.001*1e-3 ,   20.1]
-ROD_15022=[0.006*1e-3     , -2.96,   0.76, 0.0*1e-3,  20.1]
-ROD_58620=[-0.011*1e-3    ,  1.17,   0.58, 0.002*1e-3, 20.0]
-ROD_53607=[-0.038*1e-3    ,  7.36,   0.72, 0.001*1e-3, 20.1]
-ROD_53119=[0.035*1e-3      , 4.44,   0.79,   -0.004*1e-3,19.9]
-ROD_13292=[-0.007*1e-3    , 1.12,    0.77,   0.002*1e-3, 20.1]
-ROD_34194=[0.046*1e-3      , 5.3,     0.80,     -0.004*1e-3, 20.1]
-ROD_12863=[0.328*1e-3      , 11.82,  0.90,  -0.001*1e-3, 20.1]
+ROD_53278=[0.0                ,4.81,      0.86 ,  0.0083*1e-3,   20.0]
+ROD_53274=[0.0                , 3.2  ,    0.83 ,   0.00383*1e-3, 20.0]
+ROD_53281=[0.0                , 6.89,     0.90,   0.02031*1e-3,  20.0]
+ROD_53369=[0.0                , 5.53,     0.79,   0.0147*1e-3,    20.0]
+ROD_53273=[0.061*1e-3     , 4.76 ,   1.08 ,   0.001*1e-3 ,    20.1]
+ROD_15022=[0.006*1e-3     , -2.96,   0.76,   0.0*1e-3,        20.1]
+ROD_58620=[-0.011*1e-3    ,  1.17,   0.58,   0.002*1e-3,     20.0]
+ROD_53607=[-0.038*1e-3    ,  7.36,   0.72,   0.001*1e-3,     20.1]
+ROD_53119=[0.035*1e-3      , 4.44,   0.79,   -0.004*1e-3,   19.9]
+ROD_13292=[-0.007*1e-3    , 1.12,    0.77,   0.002*1e-3,    20.1]
+ROD_34194=[0.046*1e-3      , 5.3,     0.80,   -0.004*1e-3,   20.1]
+ROD_12863=[0.328*1e-3      , 11.82,  0.90,   -0.001*1e-3,   20.1]
 
 
 
@@ -256,7 +256,7 @@ class Stretch(object):
 			if brod.is_calibrated:
 				func_back=brod.Correct
 			else:
-				msg+="setup: %d, rod not calibrated. Using standad correction.\n" %(j+1)
+				msg+="setup: %d, rod not calibrated. Using standard correction.\n" %(j+1)
 				func_back=brod.StandardCorrection
 				ok=False
 			for i in range(do):
