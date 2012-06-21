@@ -1,8 +1,8 @@
 #!/usr/bin/python 
 ##################
-##rod_calibration.py simlk, june 2012
+##rodkali.py simlk, june 2012
 ##
-##kald: rod_calibration.py <input_files> <output_dir>
+##kald: rodkali.py <input_files> <output_dir>
 ##
 ##Opdater identiteter og konstanter nedenfor.
 ##
