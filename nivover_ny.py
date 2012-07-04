@@ -110,7 +110,8 @@ def NytDatoFormat(dato): #oversaetter aarmddag til dag,md.aar f.eks. 091014 til 
 
 def Usage():
 	print "Oversaettelsesprogram til MGL (/MTL) datafiler."
-	print "Kald: %s indfil udfil" %(PROGRAM)
+	print "Kald: %s indfil udfil (-tkorr)" %(PROGRAM)
+	print "-tkorr slaar temperaturkorrektioner TIL - kun MGL."
 	sys.exit()
 
 def main(args):
@@ -122,6 +123,7 @@ def main(args):
 	except Exception,msg:
 		print repr(msg)
 		Usage()
+	tkorr="-tkorr" in args
 	indfilnavn=os.path.basename(args[1])
 	print "Koerer %s paa filen %s." %(PROGRAM,indfilnavn)
 	hvd=[]
@@ -143,8 +145,11 @@ def main(args):
 	else:
 		print "Datafil genereret med: %s" %firstline.replace("PROGRAM:","").lower().strip()
 	if MGL:
-		print "Bruger IKKE laegte-temperaturudvidelse for maalte hoejdeforskelle!"
-		print "Koer istedet laegtekalibreringsprogram paa raadata!"
+		if not tkorr:
+			print "Bruger IKKE laegte-temperaturudvidelse for maalte hoejdeforskelle!"
+			print "Koer istedet laegtekalibreringsprogram paa raadata!"
+		else:
+			print "Temperaturudvidelseskorrektion (pyhhh) slaaet til!"
 		ud.write(MGLP)  #skriv header preacisions-kommentar
 	else:
 		print "Bruger IKKE laegte-temperaturudvidelse for maalte hoejdeforskelle..."
@@ -195,8 +200,8 @@ def main(args):
 			nbad+=1
 			print msg
 		else:#saa skriv til udfil...
-			#if MGL: #ved MGL brug temp.-udvidelse - bruges ikke mere (koer istedet rod_calibration.py!)
-			#	hdiff=hdiff*(1-(20-temp)*TMP_CORR)  #temperatur-udvidelse....
+			if MGL and tkorr: #ved MGL brug temp.-udvidelse - bruges ikke mere (koer istedet rod_calibration.py!)
+				hdiff=hdiff*(1-(20-temp)*TMP_CORR)  #temperatur-udvidelse....
 			ud.write("\n%12s a   %4s   1    %8.0lf" %(fra,aar,jside))
 			ud.write("\n%12s   %8.5lf m   %4d m" %(til,hdiff,afst))
 			ud.write("      %8s,%5s   %2s   \n" %(dato, tid, nopst))
