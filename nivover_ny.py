@@ -148,6 +148,7 @@ def main(args):
 		if not tkorr:
 			print "Bruger IKKE laegte-temperaturudvidelse for maalte hoejdeforskelle!"
 			print "Koer istedet laegtekalibreringsprogram paa raadata!"
+			print "(Hvis du IKKE allerede har gjort det :-) )"
 		else:
 			print "Temperaturudvidelseskorrektion (pyhhh) slaaet til!"
 		ud.write(MGLP)  #skriv header preacisions-kommentar

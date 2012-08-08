@@ -376,8 +376,9 @@ def main(args):
 			except:
 				print("Could not open outfile %s." %outname)
 				return -1
+			out.write(line);
 			rods,n_lines=GetRods(f,out)
-			out.write("; Corrections caluculated at %s\n" %time.asctime())
+			out.write("; Corrections calculated at %s\n" %time.asctime())
 			for rod,zs in rods:
 				if rod in RODS:
 					RODS[rod].SetZeroshift(zs)
