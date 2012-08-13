@@ -15,6 +15,8 @@ import time
 DEBUG=False
 ND_VALUE=-999
 
+
+	
 class Rod(object):
 	def __init__(self,name,data=None,zeroshift=None):
 		self.name=name
@@ -101,7 +103,22 @@ RODS={
 #"968":  Rod("968",ROD_53273)
 
 
+###########################
+##
+## Class to redirect stdout
+##
+###########################
 
+class RedirectStdout(object):
+	def __init__(self,log_file):
+		self.log_file=log_file
+	def write(self,text):
+		try:
+			self.log_file.write(text)
+		except:
+			pass
+		sys.__stdout__.write(text)
+	
 
 ###############################
 ## Function that reads data from data-file
@@ -342,6 +359,7 @@ def GetStats(data):
 	
 	
 def Usage():
+	sys.stdout=sys.__stdout__
 	print("To run:")
 	print("%s <input_files> <output_dir>" %os.path.basename(sys.argv[0]))
 	sys.exit()
@@ -358,6 +376,13 @@ def main(args):
 	diffs=[]
 	ndiffs2=[]
 	diffs2=[]
+	log_name="rodkali_log.log"
+	try:
+		log_file=open(log_name,"w")
+	except:
+		print("Could not open logfile: %s" %log_name)
+		Usage()
+	sys.stdout=RedirectStdout(log_file)
 	if not os.path.exists(outdir):
 		os.mkdir(outdir)
 	for fname in files:
@@ -431,6 +456,7 @@ def main(args):
 		f.close()
 	if len(diffs)==0:
 		print("No hdiffs found!")
+		log_file.close()
 		Usage()
 	m_diff,sd_diff=GetStats(diffs)
 	m_norm,sd_norm=GetStats(ndiffs)
@@ -443,6 +469,7 @@ def main(args):
 	print("Mean normalized diff: %.6f ne" %m_norm)
 	print("Std-dev  :            %.6f ne" %sd_norm)
 	print("Max      :            %.6f ne" %max_ne)
+	log_file.close()
 	return 
 	
 if __name__=="__main__":
