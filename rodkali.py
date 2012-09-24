@@ -365,7 +365,7 @@ def GetStats(data):
 def Usage():
 	sys.stdout=sys.__stdout__
 	PROGNAME=os.path.basename(sys.argv[0])
-	print("%s version: %s", %(PROGNAME,VERSION))
+	print("%s version: %s" %(PROGNAME,VERSION))
 	print("To run:")
 	print("%s <input_files> <output_dir>" %PROGNAME)
 	sys.exit()
