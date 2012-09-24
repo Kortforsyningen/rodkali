@@ -63,18 +63,22 @@ class Rod(object):
 		self.zeroshift=zs
 
 #ROD = [l_0 [m] , m_0 [ppm], alpha_T [ppm], v_G [m], T_0 [degC] ]   - see calibration report
-ROD_53278=[0.0                ,4.81,      0.86 ,  0.0083*1e-3,   20.0]
-ROD_53274=[0.0                , 3.2  ,    0.83 ,   0.00383*1e-3, 20.0]
-ROD_53281=[0.0                , 6.89,     0.90,   0.02031*1e-3,  20.0]
-ROD_53369=[0.0                , 5.53,     0.79,   0.0147*1e-3,    20.0]
-ROD_53273=[0.061*1e-3     , 4.76 ,   1.08 ,   0.001*1e-3 ,    20.1]
-ROD_15022=[0.006*1e-3     , -2.96,   0.76,   0.0*1e-3,        20.1]
-ROD_58620=[-0.011*1e-3    ,  1.17,   0.58,   0.002*1e-3,     20.0]
-ROD_53607=[-0.038*1e-3    ,  7.36,   0.72,   0.001*1e-3,     20.1]
-ROD_53119=[0.035*1e-3      , 4.44,   0.79,   -0.004*1e-3,   19.9]
-ROD_13292=[-0.007*1e-3    , 1.12,    0.77,   0.002*1e-3,    20.1]
-ROD_34194=[0.046*1e-3      , 5.3,     0.80,   -0.004*1e-3,   20.1]
-ROD_12863=[0.328*1e-3      , 11.82,  0.90,   -0.001*1e-3,   20.1]
+#ALL terms related to zero-shift (l_0 and v_G ) are set to 0 - we handle those ourselves directly in the data gathering code.
+#THUS the correction consists ONLY of a combined temperature and scale expansion coefficient acting on the nominal height (which is modified by zero-shift).
+#THE sensitivity of the correction as a function of the absolute nominal height input is very small (e.g. +- 1mm in input has no significant effect on the correction).
+#THIS change will only have significance in case two different rods are used for point attachments in each end of a stretch!
+ROD_53278=[0.0                ,4.81,      0.86 ,  0.0,    20.0]
+ROD_53274=[0.0                , 3.2 ,     0.83 ,   0.0,    20.0]
+ROD_53281=[0.0                , 6.89,     0.90,   0.0,    20.0]
+ROD_53369=[0.0                , 5.53,     0.79,   0.0,    20.0]
+ROD_53273=[0.0                , 4.76 ,   1.08 ,   0.0,    20.1]
+ROD_15022=[0.0                , -2.96,   0.76,    0.0,    20.1]
+ROD_58620=[0.0                ,  1.17,   0.58,    0.0,    20.0]
+ROD_53607=[0.0                ,  7.36,   0.72,    0.0,    20.1]
+ROD_53119=[0.0                , 4.44,   0.79,     0.0,   19.9]
+ROD_13292=[0.0                , 1.12,    0.77,    0.0,    20.1]
+ROD_34194=[0.0                , 5.3,     0.80,     0.0,   20.1]
+ROD_12863=[0.0                , 11.82,  0.90,     0.0,   20.1]
 
 
 
@@ -108,7 +112,7 @@ RODS={
 ## Class to redirect stdout
 ##
 ###########################
-
+#TODO: add close method..... perhaps make it a global object.....
 class RedirectStdout(object):
 	def __init__(self,log_file):
 		self.log_file=log_file
