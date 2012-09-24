@@ -11,7 +11,7 @@ import os, sys
 import glob
 from math import *
 import time
-
+VERSION="1.0 2012-09-24"
 DEBUG=False
 ND_VALUE=-999
 
@@ -408,6 +408,7 @@ def main(args):
 			out.write(line);
 			rods,n_lines=GetRods(f,out)
 			out.write("; Corrections calculated at %s\n" %time.asctime())
+			out.write("; using %s, version: %s\n" %(os.path.basename(args[0]),VERSION))
 			for rod,zs in rods:
 				if rod in RODS:
 					RODS[rod].SetZeroshift(zs)
