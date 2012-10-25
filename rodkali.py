@@ -6,12 +6,14 @@
 ##
 ##Opdater identiteter og konstanter nedenfor.
 ##
+## LOG:
+## 2012-10-25: Tag hensyn til negative input ved maaling af GPS stationer
 ################
 import os, sys
 import glob
 from math import *
 import time
-VERSION="1.0 2012-09-24"
+VERSION="1.1 2012-10-25"
 DEBUG=False
 ND_VALUE=-999
 
@@ -38,15 +40,20 @@ class Rod(object):
 			raise Exception("Warning: rod %s, zeroshift not set!!" %self.name)
 		else:
 			zs=self.zeroshift
+		sign=1
+		#take negative input ('inversed') into consideration.
+		if (h<0):
+			sign=-1
+			h=abs(h)
 		h_real=h-zs
 		h_corr=self.l0+h_real*(1+(self.m0+self.alpha_t*(temp-self.t0))*1e-6)+self.vg #see DE calibration report
 		h_corr+=zs
-		if DEBUG:
-			print("Rod: %s, before: %.7f m, after: %.7f m, zeroshift: %.4f m" %(self.name,h,h_corr,zs))
+		if DEBUG and (abs(h_corr-h)>0.00005 or sign<0):
+			print("Rod: %s, before: %.7f m, after: %.7f m, zeroshift: %.4f m, sign: %d" %(self.name,h,h_corr,zs,sign))
 			s=raw_input(":")
 			if "stop" in s:
 				sys.exit()
-		return h_corr
+		return h_corr*sign
 	#Standard correction used when rod parameters NOT defined below!#
 	#ONLY a standard temperature expansion applied!# 
 	def StandardCorrection(self,temp,h):
@@ -54,10 +61,14 @@ class Rod(object):
 			raise Exception("Warning: rod %s, zeroshift not set!!" %self.name)
 		else:
 			zs=self.zeroshift
+		sign=1
+		if (h<0):
+			sign=-1
+			h=abs(h)
 		h_real=h-zs
 		h_corr=h_real*(1+(0.8*1e-6)*(temp-20.0))
 		h_corr+=zs
-		return h_corr
+		return h_corr*sign
 		
 	def SetZeroshift(self,zs):
 		self.zeroshift=zs
