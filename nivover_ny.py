@@ -112,6 +112,7 @@ def Usage():
 	print "Oversaettelsesprogram til MGL (/MTL) datafiler."
 	print "Kald: %s indfil udfil (-tkorr)" %(PROGRAM)
 	print "-tkorr slaar temperaturkorrektioner TIL - kun MGL."
+	print "Og KUN hvis du IKKE allerede har koert kalibreringsprogram!"
 	sys.exit()
 
 def main(args):
@@ -151,6 +152,7 @@ def main(args):
 			print "(Hvis du IKKE allerede har gjort det :-) )"
 		else:
 			print "Temperaturudvidelseskorrektion (pyhhh) slaaet til!"
+			print "ADVARSEL: GOER kun dette, hvis du IKKE allerede har koert kalibreringsprogram!!!!!" 
 		ud.write(MGLP)  #skriv header preacisions-kommentar
 	else:
 		print "Bruger IKKE laegte-temperaturudvidelse for maalte hoejdeforskelle..."
