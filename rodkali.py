@@ -13,10 +13,11 @@ import os, sys
 import glob
 from math import *
 import time
+from datetime import datetime
 VERSION="1.1 2012-10-25"
 DEBUG=False
 ND_VALUE=-999
-
+CALIBRATION_PATH="."
 
 	
 class Rod(object):
@@ -73,49 +74,6 @@ class Rod(object):
 	def SetZeroshift(self,zs):
 		self.zeroshift=zs
 
-#ROD = [l_0 [m] , m_0 [ppm], alpha_T [ppm], v_G [m], T_0 [degC] ]   - see calibration report
-#ALL terms related to zero-shift (l_0 and v_G ) are set to 0 - we handle those ourselves directly in the data gathering code.
-#THUS the correction consists ONLY of a combined temperature and scale expansion coefficient acting on the nominal height (which is modified by zero-shift).
-#THE sensitivity of the correction as a function of the absolute nominal height input is very small (e.g. +- 1mm in input has no significant effect on the correction).
-#THIS change will only have significance in case two different rods are used for point attachments in each end of a stretch!
-ROD_53278=[0.0                ,4.81,      0.86 ,  0.0,    20.0]
-ROD_53274=[0.0                , 3.2 ,     0.83 ,   0.0,    20.0]
-ROD_53281=[0.0                , 6.89,     0.90,   0.0,    20.0]
-ROD_53369=[0.0                , 5.53,     0.79,   0.0,    20.0]
-ROD_53273=[0.0                , 4.76 ,   1.08 ,   0.0,    20.1]
-ROD_15022=[0.0                , -2.96,   0.76,    0.0,    20.1]
-ROD_58620=[0.0                ,  1.17,   0.58,    0.0,    20.0]
-ROD_53607=[0.0                ,  7.36,   0.72,    0.0,    20.1]
-ROD_53119=[0.0                , 4.44,   0.79,     0.0,   19.9]
-ROD_13292=[0.0                , 1.12,    0.77,    0.0,    20.1]
-ROD_34194=[0.0                , 5.3,     0.80,     0.0,   20.1]
-ROD_12863=[0.0                , 11.82,  0.90,     0.0,   20.1]
-
-
-
-		
-#TRANSLATION TABLE#
-RODS={
-"110":  Rod("110",ROD_53278),
-"111":  Rod("111",ROD_53274),
-"112":  Rod("112",ROD_53281),
-"113":  Rod("113",ROD_53369),
-"120":  Rod("120",ROD_53273),
-"121":  Rod("121",ROD_15022),
-"132":  Rod("132",ROD_58620),
-"123":  Rod("123",ROD_53607),
-"130":  Rod("130",ROD_53119),
-"131":  Rod("131",ROD_13292),
-"122":  Rod("122",ROD_12863)
-}
-#"961":  Rod("961",ROD_53273),
-#"962":  Rod("962",ROD_53273),
-#"963":  Rod("963",ROD_53273),
-#"964":  Rod("963",ROD_53273),
-#"965":  Rod("965",ROD_53273),
-#"966":  Rod("966",ROD_53273),
-#"967":  Rod("967",ROD_53273),
-#"968":  Rod("968",ROD_53273)
 
 
 ###########################
@@ -134,6 +92,69 @@ class RedirectStdout(object):
 			pass
 		sys.__stdout__.write(text)
 	
+############################
+## Function which reads a calibration file - format
+## Long_rod_name,l_0 [m],m_0,[ppm],alpha_T [ppm],v_G [m],T_0 [degC]  #l_0 and v_g are zero-shift constants and ARE not used now - should be zero!
+## alias_name,Long_rod_name   #add a short alias name e.g: 110 ROD_53278
+## Comma is used as separator!
+
+def ReadCalibrationFile(f):
+	date=None
+	rods=dict()
+	alias=dict()
+	data=dict()
+	for line in f:
+		line=line.strip()
+		if "#" in line:
+			line=line[:line.index("#")] #remove comments
+		if len(line)>0:
+			items=map(lambda x:x.strip(),line.split(","))
+			if len(items)>1:
+				if len(items)==6:	
+					long_name=items[0]
+					try:
+						l0,m0,alpha_t,vg,t0=map(float,items[1:])
+					except:
+						print("Wrong format of rod specification: %s" %line)
+					else:
+						data[long_name]=[l0,m0,alpha_t,vg,t0]
+						print("Defined rod %s" %long_name)
+				elif len(items)==2:
+					short_name=items[0]
+					long_name=items[1]
+					alias[short_name]=long_name
+					print("Added alias: %s=%s" %(short_name,long_name))
+				else:
+					print("Unintepretable line: %s" %line)
+					
+			else:
+				print("Bad line: %s" %line)
+	for short_name in alias:
+		long_name=alias[short_name]
+		if long_name in data:
+			rods[short_name]=Rod(short_name,data[long_name])
+		else:
+			print("Bad alias for %s, rod %s not defined!" %(short_name,long_name))
+	return rods
+
+def FindRCF(date):
+	#find the newest calibration file which is older than the date#
+	print("Finding matching rod calibration file (rcf)....")
+	fnames=glob.glob(os.path.join(CALIBRATION_PATH,"*.rcf"))
+	best_date=datetime(1900,1,1)
+	rcf_name=None
+	for fname in fnames:
+		try:
+			y,m,d=map(int,os.path.splitext(os.path.basename(fname))[0].split("_"))
+		except:
+			print("Bad name format of rcf: %s" %os.path.basename(fname))
+		else:
+			file_date=datetime(y,m,d)
+			if (file_date<date and file_date>best_date):
+				best_date=file_date
+				rcf_name=fname
+	return rcf_name
+		
 
 ###############################
 ## Function that reads data from data-file
@@ -331,13 +352,14 @@ def StandardCorrection(temp,h,zs=0):
 	return new
 
 ################################
-# Gets rods from data-file and copies header to output#
+# Gets rods, and date, from data-file and copies header to output#
 ################################
 
 	
-def GetRods(f,out):
+def ReadHeader(f,out):
 	rods=[]
 	n_lines=0
+	dato=None
 	line=f.readline()
 	while len(line)>0:
 		n_lines+=1
@@ -348,11 +370,14 @@ def GetRods(f,out):
 			continue
 		#Check for formatting signal that header ended:
 		if sline[0]=="*":
-			return rods,n_lines
+			return rods,n_lines,dato
 		if len(sline)==4 and "nulpunktsfejl" in line.lower():
 			rods.append([sline[0][:-1],float(sline[-2])])
+		elif "Dato" in line:
+			d,m,y=map(int,sline[-2].split("."))
+			dato=datetime(y,m,d)
 		line=f.readline()
-	return None,None
+	return None,None,None
 
 def GetDiff(l1,l2):
 	if len(l1)!=len(l2):
@@ -378,7 +403,7 @@ def Usage():
 	PROGNAME=os.path.basename(sys.argv[0])
 	print("%s version: %s" %(PROGNAME,VERSION))
 	print("To run:")
-	print("%s <input_files> <output_dir>" %PROGNAME)
+	print("%s <input_files> <output_dir> <calibration_file_path> (last arg optional)" %PROGNAME)
 	sys.exit()
 
 def main(args):
@@ -389,6 +414,21 @@ def main(args):
 		print("No input files!")
 		Usage()
 	outdir=args[2]
+	#We can specify a rod calibration file - rcf- to use manually#
+	if len(args)>3:
+		input_rcf=args[3]
+		try:
+			f=open(input_rcf)
+		except:
+			print("Unable to open rod calibration file %s" %input_rcf)
+			Usage()
+		RODS=ReadCalibrationFile(f)
+		f.close()
+		if len(RODS)==0:
+			print("No rods defined in calibration file %s" &input_rcf)
+			Usage()
+	else:
+		input_rcf=None
 	ndiffs=[]
 	diffs=[]
 	ndiffs2=[]
@@ -419,9 +459,39 @@ def main(args):
 				print("Could not open outfile %s." %outname)
 				return -1
 			out.write(line);
-			rods,n_lines=GetRods(f,out)
+			rods,n_lines,date=ReadHeader(f,out)
+			if date is None:
+				print("Unable to read date from header!")
+				if input_rcf is None:
+					print("Fix header or specify a calibration file manually - skipping.")
+					out.close()
+					f.close()
+					continue
+			
+			if input_rcf is None:
+				name_rcf=FindRCF(date)
+				if name_rcf is None:
+					print("Found no matching rod calibration file! - skipping!")
+					out.close()
+					f.close()
+					continue
+				g=open(name_rcf)
+				RODS=ReadCalibrationFile(g)
+				g.close()
+				if len(RODS)==0:
+					print("No rods defined in %s ! - skipping..." %name_rcf)
+					out.close()
+					f.close()
+					continue
+				
+			else:
+				name_rcf=input_rcf
+			print("Using rod calibration file: %s" %name_rcf)
+			if date is not None:
+				print("Date of data file is: %s" %(date.isoformat()[:10]))
 			out.write("; Corrections calculated at %s\n" %time.asctime())
 			out.write("; using %s, version: %s\n" %(os.path.basename(args[0]),VERSION))
+			out.write("; using correction file: %s\n" %name_rcf)
 			for rod,zs in rods:
 				if rod in RODS:
 					RODS[rod].SetZeroshift(zs)
