@@ -14,7 +14,7 @@ import glob
 from math import *
 import time
 from datetime import datetime
-VERSION="1.1 2012-10-25"
+VERSION="2.0 2013-03-13"
 DEBUG=False
 ND_VALUE=-999
 CALIBRATION_PATH=os.path.join(os.path.dirname(__file__),"RCF")
