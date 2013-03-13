@@ -17,7 +17,7 @@ from datetime import datetime
 VERSION="1.1 2012-10-25"
 DEBUG=False
 ND_VALUE=-999
-CALIBRATION_PATH="."
+CALIBRATION_PATH=os.path.join(os.path.dirname(__file__),"RCF")
 
 	
 class Rod(object):
