@@ -15,7 +15,7 @@ from math import *
 import time
 from datetime import datetime
 VERSION="2.0 2013-03-13"
-DEBUG=False
+DEBUG="-debug" in sys.argv
 ND_VALUE=-999
 CALIBRATION_PATH=os.path.join(os.path.dirname(__file__),"RCF")
 
@@ -195,7 +195,8 @@ def GetData(f,rods,n_lines):
 			else:
 				rod_class=None
 				msg+="Rod %s not defined!\n" %rod
-			stretch.AddBack(data,rod_class)
+			if stretch is not None:
+                                stretch.AddBack(data,rod_class)
 		elif "fremsigte"==sline[0]:
 			#len can be 8 9 10 or 11 - 9 or 11 means we have an endpoint
 			#8,9 means single meas, 10 or 11 means double meas.
@@ -215,8 +216,9 @@ def GetData(f,rods,n_lines):
 			else:
 				rod_class=None
 				msg+="Rod %s not defined!\n" %rod
-			stretch.AddForward(data,rod_class)	
-		elif len(sline)>0 and sline[0]=="T:":
+			if stretch is not None:
+                                stretch.AddForward(data,rod_class)	
+		elif len(sline)>0 and sline[0]=="T:" and stretch is not None:
 			stretch.AddTemp(float(sline[1]))
 		elif len(sline)>0 and sline[0]=="#":
 			if not should_end:
@@ -224,9 +226,14 @@ def GetData(f,rods,n_lines):
 			should_end=False
 			if p1!=sline[1] or p2!=sline[2]:
 				msg+="line: %d, head says: %s -> %s, data says: %s -> %s\n" %(n_lines,sline[1],sline[2],p1,p2)
-			stretch.SetHead(sline)
 			#if head found - save and test (in stretch class)
-			stretches.append(stretch)
+			if stretch is not None:
+                                stretch.SetHead(sline)
+                                stretches.append(stretch)
+                        else:
+                                msg+="Something wrong, a 'stray / unstarted' head around line %d\n" %(n_lines)
+			#Now this stretch is dead - but we do not start a new one until we have found a proper "tilbagesigte".
+			stretch=None
 		line=f.readline()
 		
 	return stretches,msg
@@ -255,11 +262,17 @@ class Stretch(object):
 			if self.nopst!=len(self.forward):
 				raise Exception("%s->%s. Number of setups in head incosistent with data!" %(self.p1,self.p2))
 		self.raw_hdiff=float(head[6])
-		diff=abs(self.raw_hdiff-self.GetHdiff())
+		calc_h=self.GetHdiff()
+		diff=abs(self.raw_hdiff-calc_h)
+		if DEBUG:
+                        print("SetHead: %s->%s: raw: %.4f m, calculated: %.4f m " %(self.p1,self.p2,self.raw_hdiff,calc_h))
 		if diff>1e-4:
 			h1=sum([h[0] for h in self.forward])
 			h2=sum([h[0] for h in self.back])
-			print("Calulated from single meas: %.6f, saved: %.6f" %(h2-h1,self.raw_hdiff))
+			print("ERROR:\nCalulated from single meas: %.6f, saved: %.6f, nopst: %d" %(h2-h1,self.raw_hdiff,self.nopst))
+			if DEBUG or self.nopst<4:
+				for i in range(self.nopst):
+					print("Setup %d: forward: %s, backwards: %s" %(i+1,self.forward[i],self.back[i]))
 			raise Exception("%s->%s. Inconsistency %.4f mm between calculated hdiff and hdiff from head" 
 			%(self.p1,self.p2,diff*1000))
 			
@@ -283,7 +296,7 @@ class Stretch(object):
 		if len(self.temp)<len(self.back):
 			lots_of_temps=[t]*(len(self.back)-len(self.temp))
 			self.temp.extend(lots_of_temps)
-	def ApplyCorrection(self):
+	def ApplyCorrection(self,report=False):
 		ok=True
 		new_back=[]
 		new_forward=[]
@@ -317,12 +330,16 @@ class Stretch(object):
 					f_data.append(ND_VALUE)
 					b_data.append(ND_VALUE)
 					continue
+                                
 				#print("Back:")
 				val=func_back(self.temp[j],self.back[j][i])
 				b_data.append(val)
-				#print val,new_back
+				if report:
+                                        print("Back: before corr.: %.5f, after: %.4f" %(val,self.back[j][i]))
 				#print("Forw:")
 				val=func_forward(self.temp[j],self.forward[j][i])
+				if report:
+                                        print("Forward: before corr.: %.5f, after: %.4f" %(val,self.forward[j][i]))
 				f_data.append(val)
 				#print val,new_forward
 			new_forward.append(f_data)
@@ -407,8 +424,12 @@ def Usage():
 	sys.exit()
 
 def main(args):
+	global DEBUG
 	if len(args)<3:
 		Usage()
+	if "-debug" in args:
+		DEBUG=True
+		del args[args.index("-debug")]
 	files=glob.glob(args[1])
 	if len(files)==0:
 		print("No input files!")
@@ -518,13 +539,22 @@ def main(args):
 				diff=abs(h_corr-h_uncorr)*1e3  #convert to mm - used in all calculations on diffs below.
 				ndiff=diff/sqrt(s.distance*1e-3)
 				p1,p2=s.GetPoints()
-				if ndiff>0.2: #0,2 ne limit for report
+				if ndiff>0.2 or DEBUG: #0,2 ne limit for report
 					mean_temp=sum(s.temp)/float(len(s.temp))
-					print("Large correction!")
+					if ndiff>0.2:
+                                                print("Large correction!")
 					print("file: %s, stretch: %s->%s, diff: %.4f mm, dist: %.2f m" %(fname,p1,p2,diff,s.distance))
 					print("raw: %.6f m, corr: %.6fm" %(h_uncorr,h_corr))
+					print("saved: %.6f m" %(s.raw_hdiff))
 					print("normalised: %.6f ne" %(ndiff))
 					print("Mean-temp: %.2f deg C" %mean_temp)
+				#an extra extra check....
+				diff2=abs(h_corr-s.raw_hdiff)*1e3
+				if diff2>4:
+                                        print("%s->%s:" %(p1,p2))
+                                        print("Something wrong! Saved hdiff differs a lot from calculated: %.4f mm" %diff2)
+                                        print("Nopst: %d, len data: %d" %(s.nopst,len(s.forward)))
+                                        #bc,fc,msg,ok=s.ApplyCorrection(True)
 				ndiffs.append(ndiff)
 				diffs.append(diff)
 				if True: #perhaps add some switch here for no file output....
